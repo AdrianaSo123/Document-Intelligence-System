@@ -1,15 +1,15 @@
 from abc import ABC, abstractmethod
 from typing import List
-from bdis.domain.entities import DocumentInsight
+from bdis.domain.entities import DocumentExtraction
 
 class IDocumentRepository(ABC):
     @abstractmethod
-    def save(self, insight: DocumentInsight) -> str:
-        """Saves a DocumentInsight and returns its unique ID"""
+    def save(self, extraction: DocumentExtraction) -> str:
+        """Saves a DocumentExtraction and returns its unique ID"""
         pass
         
     @abstractmethod
-    def get_all(self) -> List[DocumentInsight]:
+    def get_all(self) -> List[DocumentExtraction]:
         """Retrieves all parsed documents from the data store"""
         pass
         

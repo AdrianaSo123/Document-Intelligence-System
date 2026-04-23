@@ -5,8 +5,12 @@ from bdis.frameworks.api.dependencies import get_repository, get_fetch_documents
 from bdis.usecases.fetch_documents import FetchDocumentsUseCase
 from celery.result import AsyncResult
 
+from bdis.frameworks.api.routers import jobs
+
 logging.basicConfig(level=logging.INFO)
 app = FastAPI(title="Business Document Intelligence System")
+
+app.include_router(jobs.router)
 
 @app.post("/upload")
 async def upload_document(file: UploadFile = File(...)):

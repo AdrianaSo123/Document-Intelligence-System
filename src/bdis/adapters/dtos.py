@@ -11,3 +11,12 @@ class LLMResponseBoundaryDTO(BaseModel):
     currency: Optional[str] = Field(None, max_length=3) 
     due_date: Optional[str] = None # Expecting YYYY-MM-DD
     status: Optional[str] = None
+
+class ExtractionResultDTO(BaseModel):
+    document_id: str
+    status: str
+    amount_usd: float
+    company_name: Optional[str]
+    confidence: float
+    trace_id: str
+    created_at: str

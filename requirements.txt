@@ -16,3 +16,4 @@ pdf2image==1.17.0
 filetype==1.2.0
 psycopg2-binary==2.9.9
 boto3==1.34.84
+tenacity==8.2.3

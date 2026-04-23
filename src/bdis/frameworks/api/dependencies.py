@@ -11,11 +11,28 @@ def get_repository():
 def get_storage():
     return S3StorageAdapter()
 
+from bdis.core.resilience import resilience_wrapper
+
 def get_extractor():
-    return OpenAIExtractor(os.getenv("OPENAI_API_KEY"))
+    extractor = OpenAIExtractor(os.getenv("OPENAI_API_KEY"))
+    # Apply shared resilience policy for the "openai_service"
+    extractor.extract_schema = resilience_wrapper("openai_service")(extractor.extract_schema)
+    return extractor
 
 def get_process_document_usecase():
-    return ProcessDocumentUseCase(get_extractor(), get_repository(), get_storage())
+    # Note: Phase 4 uses ProcessingPipeline, we should update this
+    from bdis.usecases.processing_pipeline import ProcessingPipeline
+    from bdis.domain.normalization import DocumentNormalizer
+    from bdis.adapters.evaluator_adapter import ExactMatchEvaluator
+    from bdis.adapters.sanitizer_adapter import RegexPIISanitizer
+    
+    return ProcessingPipeline(
+        get_extractor(),
+        DocumentNormalizer(),
+        get_repository(),
+        ExactMatchEvaluator(),
+        RegexPIISanitizer()
+    )
 
 def get_fetch_documents_usecase():
     return FetchDocumentsUseCase(get_repository())
