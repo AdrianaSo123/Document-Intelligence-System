@@ -8,6 +8,7 @@ class DocumentInsight:
     status: str
     due_date: date
     company_name: Optional[str]
+    s3_uri: Optional[str] = None
 
     def calculate_risk_flag(self) -> bool:
         """Determines if a document requires manual human review based on business rules."""

@@ -1,0 +1,82 @@
+# AWS ECS + Fargate + Cognito Deployment Manifest (Theoretical Draft)
+# This file serves to demonstrate the architectural boundaries for a true Fortune 500 deployment.
+
+Resources:
+  # ==========================================
+  # 1. Edge Security (Application Load Balancer)
+  # ==========================================
+  BDISLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref WebSecurityGroup
+
+  # ==========================================
+  # 2. SSO Authentication Proxy (Cognito)
+  # ==========================================
+  BDISCognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: BDIS_Corporate_SSO
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: True # Prevent self-registration.
+
+  ALBListenerHTTPS:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      Port: 443
+      Protocol: HTTPS
+      DefaultActions:
+        # Action 1: Force SSO Login
+        - Type: authenticate-cognito
+          AuthenticateCognitoConfig:
+            UserPoolArn: !GetAtt BDISCognitoUserPool.Arn
+            UserPoolClientId: !Ref BDISCognitoClient
+            UserPoolDomain: !Ref BDISCognitoDomain
+        # Action 2: Forward to Streamlit UI Container
+        - Type: forward
+          TargetGroupArn: !Ref BDISStreamlitTargetGroup
+
+  # ==========================================
+  # 3. Core Compute (ECS Fargate Clusters)
+  # ==========================================
+  BDISFargateCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: BDIS-Production
+
+  FastAPITaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      RequiresCompatibilities: [ FARGATE ]
+      Cpu: 1024
+      Memory: 2048
+      ContainerDefinitions:
+        - Name: fastapi-engine
+          Image: <ecr-repo-url>/bdis-api:latest
+          Environment:
+            - Name: DATABASE_URL
+              Value: !Ref RDSPostgresEndpoint
+            - Name: AWS_S3_BUCKET
+              Value: !Ref BDISDocumentBucket
+
+  # ==========================================
+  # 4. Deep Storage (RDS & S3)
+  # ==========================================
+  BDISDatabase:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: postgres
+      DBInstanceClass: db.m5.large
+      MasterUsername: bdis_admin
+      MasterUserPassword: '{{resolve:secretsmanager:bdis/db_password}}'
+      StorageEncrypted: True # Satisfies Security Audit
+
+  BDISDocumentBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256 # Satisfies File Security Audit

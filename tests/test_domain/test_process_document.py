@@ -21,6 +21,21 @@ class MockDocumentRepository(IDocumentRepository):
         self.saved_insights.append(insight)
         return f"mock_id_{len(self.saved_insights)}"
 
+    def get_all(self):
+        return self.saved_insights
+        
+    def get_all_raw(self):
+        return [
+            {
+                "document_id": f"mock_id_{i}",
+                "company_name": insight.company_name,
+                "amount_usd": insight.amount_usd,
+                "status": insight.status,
+                "due_date": insight.due_date
+            }
+            for i, insight in enumerate(self.saved_insights)
+        ]
+
 def test_document_insight_risk_rules():
     # 1. High Amount Risk
     insight = DocumentInsight(amount_usd=15000, status="paid", due_date=date.today(), company_name="Acme Corp")

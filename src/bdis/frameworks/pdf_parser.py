@@ -12,4 +12,14 @@ def parse_pdf(file_bytes: bytes) -> str:
             extracted = page.extract_text()
             if extracted:
                 text += extracted + "\n"
+                
+    if not text.strip():
+        # High Severity Resolution: Silent failure OCR trigger
+        from pdf2image import convert_from_bytes
+        import pytesseract
+        
+        images = convert_from_bytes(file_bytes)
+        for img in images:
+            text += pytesseract.image_to_string(img) + "\n"
+            
     return text

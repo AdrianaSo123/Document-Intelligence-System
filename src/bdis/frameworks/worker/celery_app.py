@@ -15,5 +15,5 @@ def process_document_task(file_bytes: bytes):
     usecase = get_process_document_usecase()
     
     # 3. Execute Core Business Logic
-    doc_id = usecase.execute(raw_text)
+    doc_id = usecase.execute(raw_text, file_bytes)
     return doc_id

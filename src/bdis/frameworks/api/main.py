@@ -1,7 +1,11 @@
-from fastapi import FastAPI, UploadFile, File
+import logging
+from fastapi import FastAPI, UploadFile, File, Depends
 from bdis.frameworks.worker.celery_app import process_document_task
+from bdis.frameworks.api.dependencies import get_repository, get_fetch_documents_usecase
+from bdis.usecases.fetch_documents import FetchDocumentsUseCase
 from celery.result import AsyncResult
 
+logging.basicConfig(level=logging.INFO)
 app = FastAPI(title="Business Document Intelligence System")
 
 @app.post("/upload")
@@ -20,3 +24,8 @@ async def get_status(job_id: str):
     if task_result.ready():
         return {"job_id": job_id, "status": "completed", "document_id": task_result.result}
     return {"job_id": job_id, "status": "processing"}
+
+@app.get("/documents")
+async def get_documents(use_case: FetchDocumentsUseCase = Depends(get_fetch_documents_usecase)):
+    # Clean Architecture Enforced: No direct ORM touching
+    return use_case.execute()

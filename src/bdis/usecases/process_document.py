@@ -4,17 +4,19 @@ from typing import Dict, Any
 from bdis.domain.entities import DocumentInsight
 from bdis.ports.extraction_service import IExtractionService
 from bdis.ports.document_repository import IDocumentRepository
+from bdis.ports.file_storage import IFileStorage
 from bdis.adapters.dtos import LLMResponseBoundaryDTO
 
 class ProcessDocumentUseCase:
     """
     Orchestrates the ingestion, extraction, rule calculation, and saving of a document.
     """
-    def __init__(self, extractor: IExtractionService, repository: IDocumentRepository):
+    def __init__(self, extractor: IExtractionService, repository: IDocumentRepository, storage: IFileStorage = None):
         self.extractor = extractor
         self.repository = repository
+        self.storage = storage
 
-    def execute(self, raw_text: str) -> str:
+    def execute(self, raw_text: str, file_bytes: bytes = None) -> str:
         """
         Executes the business logic workflow.
         Returns the ID of the saved record.
@@ -37,12 +39,18 @@ class ProcessDocumentUseCase:
         status = dto.status if dto.status is not None else "unknown"
         company_name = dto.company_name if dto.company_name is not None else ""
 
+        # Upload to Cloud
+        s3_uri = None
+        if self.storage and file_bytes:
+            s3_uri = self.storage.upload_file(file_bytes, "uploaded_invoice.pdf")
+
         # 2. Construct Pure Domain Entity
         insight = DocumentInsight(
             amount_usd=float(amount),
             status=status,
             due_date=parsed_date,
-            company_name=company_name
+            company_name=company_name,
+            s3_uri=s3_uri
         )
         
         # (Optional Workflow Step) Calculate risk flag -- Though it's self-calculating,

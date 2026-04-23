@@ -1,0 +1,48 @@
+/* =========================================
+   BDIS Enterprise Design System
+   ========================================= */
+
+/* --- Anti-Chrome Mechanics --- */
+#MainMenu { display: none; }
+footer { display: none; }
+header[data-testid="stHeader"] { background-color: transparent !important; }
+
+/* Strip white top-padding out to give Edge-to-Edge layout */
+.block-container {
+    padding-top: 2rem !important;
+}
+
+/* --- Native CSS Custom Properties --- */
+:root {
+    --glass-bg: rgba(255, 255, 255, 0.03);
+    --border-subtle: rgba(255, 255, 255, 0.1);
+    --hover-shift: translateY(-2px);
+    --shadow-bloom: 0px 4px 15px rgba(0, 242, 254, 0.15);
+}
+
+/* --- Glassmorphism Enhancements --- */
+[data-testid="stDataFrame"] {
+    background: var(--glass-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-subtle);
+    backdrop-filter: blur(10px);
+}
+
+/* Target Metric divs seamlessly */
+[data-testid="stMetricValue"] {
+    color: #4CAF50; /* Base success fallback */
+}
+
+div[data-testid="metric-container"] {
+    background: var(--glass-bg);
+    border: 1px solid var(--border-subtle);
+    padding: 1.2rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+div[data-testid="metric-container"]:hover {
+    transform: var(--hover-shift);
+    box-shadow: var(--shadow-bloom);
+    border: 1px solid rgba(0, 242, 254, 0.5);
+}

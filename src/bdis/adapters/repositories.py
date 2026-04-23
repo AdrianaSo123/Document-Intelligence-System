@@ -14,10 +14,12 @@ class DocumentInsightModel(Base):
     amount_usd = Column(Float, nullable=False, default=0.0)
     status = Column(String, nullable=False, default="unknown")
     due_date = Column(Date, nullable=False)
+    s3_uri = Column(String, nullable=True)
 
-class SqliteDocumentRepository(IDocumentRepository):
+class SQLDocumentRepository(IDocumentRepository):
     def __init__(self, db_url="sqlite:///bdis_dev.db"):
-        self.engine = create_engine(db_url, connect_args={"check_same_thread": False})
+        connect_args = {"check_same_thread": False} if "sqlite" in db_url else {}
+        self.engine = create_engine(db_url, connect_args=connect_args)
         Base.metadata.create_all(self.engine)
         self.SessionLocal = sessionmaker(autoflush=False, bind=self.engine)
 
@@ -29,7 +31,8 @@ class SqliteDocumentRepository(IDocumentRepository):
             company_name=insight.company_name,
             amount_usd=insight.amount_usd,
             status=insight.status,
-            due_date=insight.due_date
+            due_date=insight.due_date,
+            s3_uri=insight.s3_uri
         )
         
         with self.SessionLocal() as session:
@@ -37,3 +40,30 @@ class SqliteDocumentRepository(IDocumentRepository):
             session.commit()
             
         return db_id
+        
+    def get_all(self) -> list[DocumentInsight]:
+        with self.SessionLocal() as session:
+            records = session.query(DocumentInsightModel).all()
+            return [
+                DocumentInsight(
+                    company_name=r.company_name,
+                    amount_usd=r.amount_usd,
+                    status=r.status,
+                    due_date=r.due_date,
+                    s3_uri=r.s3_uri
+                ) for r in records
+            ]
+            
+    def get_all_raw(self) -> list[dict]:
+        with self.SessionLocal() as session:
+            records = session.query(DocumentInsightModel).all()
+            return [
+                {
+                    "document_id": r.id,
+                    "company_name": r.company_name,
+                    "amount_usd": r.amount_usd,
+                    "status": r.status,
+                    "due_date": r.due_date,
+                    "s3_uri": r.s3_uri
+                } for r in records
+            ]
