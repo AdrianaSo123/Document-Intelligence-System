@@ -26,6 +26,13 @@ BDIS follows the **Ports and Adapters (Hexagonal)** pattern to ensure the core b
 - **Ports**: Abstract interfaces for external dependencies (IExtractionService, IDocumentRepository).
 - **Adapters**: Concrete implementations (OpenAIExtractor, SQLDocumentRepository, RegexPIISanitizer).
 
+### 🛡️ Uncle Bob Verified
+The codebase has undergone multiple architectural audits to ensure strict adherence to **SOLID** principles:
+- **DIP**: High-level policies depend on abstractions, never on infrastructure.
+- **SRP**: Every class has a single, well-defined reason to change.
+- **Value Objects**: Domain integrity is protected by specialized objects like `Money`.
+- **Boundary Protection**: Typed objects (`RawExtraction`) prevent primitive obsession at the system boundaries.
+
 ---
 
 ## 🛠️ Tech Stack

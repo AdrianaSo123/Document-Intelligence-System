@@ -14,11 +14,12 @@ def test_normalizer_status_mapping():
     assert normalizer.normalize({"status": "Unknown"})["status"] == "unknown"
 
 def test_normalizer_date_normalization():
+    from datetime import date
     normalizer = DocumentNormalizer()
     # ISO remains same
-    assert normalizer.normalize({"due_date": "2024-01-01"})["due_date"] == "2024-01-01"
+    assert normalizer.normalize({"due_date": "2024-01-01"})["due_date"] == date(2024, 1, 1)
     # Slash format
-    assert normalizer.normalize({"due_date": "12/31/2023"})["due_date"] == "2023-12-31"
+    assert normalizer.normalize({"due_date": "12/31/2023"})["due_date"] == date(2023, 12, 31)
 
 def test_sanitizer_redaction():
     sanitizer = RegexPIISanitizer()

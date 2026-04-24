@@ -11,6 +11,24 @@ class JobStatus(str, Enum):
     REVIEW_REQUIRED = "REVIEW_REQUIRED"
     FAILED = "FAILED"
 
+from bdis.domain.value_objects import Money
+
+@dataclass(frozen=True)
+class RawExtraction:
+    """
+    Typed wrapper for raw AI extraction results.
+    Prevents Primitive Obsession at the boundary.
+    """
+    company_name: Optional[str] = None
+    amount: Optional[float] = None
+    currency: Optional[str] = "USD"
+    due_date: Optional[str] = None
+    status: Optional[str] = None
+    invoice_id: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {k: v for k, v in self.__dict__.items()}
+
 @dataclass
 class DocumentExtraction:
     """
@@ -21,8 +39,8 @@ class DocumentExtraction:
     raw_text: str
     extracted_data: Dict[str, Any]
     
-    # Insights (Calculated or mapped)
-    amount_usd: float = 0.0
+    # Insights (Value Objects & Mapped Types)
+    money: Money = field(default_factory=lambda: Money(0.0))
     company_name: Optional[str] = None
     due_date: Optional[date] = None
     s3_uri: Optional[str] = None
@@ -34,32 +52,34 @@ class DocumentExtraction:
     error_message: Optional[str] = None
     created_at: date = field(default_factory=date.today)
 
+    @property
+    def amount_usd(self) -> float:
+        """Legacy helper for backward compatibility with repositories/UI."""
+        return self.money.amount
+
     @classmethod
-    def from_normalized_data(
+    def create(
         cls, 
         document_id: str, 
         trace_id: str, 
         status: JobStatus, 
         raw_text: str, 
         normalized_data: Dict[str, Any], 
+        due_date: Optional[date] = None,
         evaluation: Optional[EvaluationResult] = None,
         confidence: float = 0.0,
         error_message: Optional[str] = None
     ) -> 'DocumentExtraction':
-        due_date = normalized_data.get("due_date")
-        if isinstance(due_date, str):
-            try:
-                due_date = date.fromisoformat(due_date)
-            except ValueError:
-                due_date = None
-
+        """
+        Pure Domain Factory: Expects valid objects, not raw strings.
+        """
         return cls(
             document_id=document_id,
             trace_id=trace_id,
             status=status,
             raw_text=raw_text,
             extracted_data=normalized_data,
-            amount_usd=normalized_data.get("amount", 0.0),
+            money=Money.from_dict(normalized_data),
             company_name=normalized_data.get("company_name"),
             due_date=due_date,
             confidence=confidence,

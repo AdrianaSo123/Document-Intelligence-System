@@ -1,7 +1,9 @@
 import uuid
+from datetime import date
 from sqlalchemy import Column, String, Float, Date, create_engine, JSON
 from sqlalchemy.orm import declarative_base, sessionmaker
 from bdis.domain.entities import DocumentExtraction
+from bdis.domain.value_objects import Money
 from bdis.ports.document_repository import IDocumentRepository
 
 Base = declarative_base()
@@ -22,13 +24,16 @@ class DocumentExtractionModel(Base):
     created_at = Column(Date)
 
 class SQLDocumentRepository(IDocumentRepository):
-    def __init__(self, db_url="sqlite:///bdis_dev.db"):
-        connect_args = {"check_same_thread": False} if "sqlite" in db_url else {}
-        self.engine = create_engine(db_url, connect_args=connect_args)
-        Base.metadata.create_all(self.engine)
-        self.SessionLocal = sessionmaker(autoflush=False, bind=self.engine)
+    def __init__(self, session_factory):
+        self.SessionLocal = session_factory
 
     def save(self, extraction: DocumentExtraction) -> str:
+        # Ensure extracted_data is JSON serializable (convert dates to strings)
+        extracted_data_json = extraction.extracted_data.copy()
+        for k, v in extracted_data_json.items():
+            if isinstance(v, (date,)):
+                extracted_data_json[k] = v.isoformat()
+
         model = DocumentExtractionModel(
             id=str(uuid.uuid4()),
             document_id=extraction.document_id,
@@ -39,7 +44,7 @@ class SQLDocumentRepository(IDocumentRepository):
             due_date=extraction.due_date,
             confidence=extraction.confidence,
             error_message=extraction.error_message,
-            extracted_data=extraction.extracted_data,
+            extracted_data=extracted_data_json,
             s3_uri=extraction.s3_uri,
             created_at=extraction.created_at
         )
@@ -59,7 +64,7 @@ class SQLDocumentRepository(IDocumentRepository):
                     status=r.status,
                     raw_text="", # Not stored in model currently
                     extracted_data=r.extracted_data or {},
-                    amount_usd=r.amount_usd,
+                    money=Money(r.amount_usd),
                     company_name=r.company_name,
                     due_date=r.due_date,
                     s3_uri=r.s3_uri,

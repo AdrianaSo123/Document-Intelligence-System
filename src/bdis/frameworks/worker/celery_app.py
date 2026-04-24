@@ -2,7 +2,7 @@ import os
 import uuid
 from celery import Celery
 from bdis.frameworks.pdf_parser import parse_pdf
-from bdis.frameworks.api.dependencies import get_process_document_usecase
+from bdis.frameworks.api.dependencies import get_processing_pipeline
 
 redis_url = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 celery_app = Celery("bdis_worker", broker=redis_url, backend=redis_url)
@@ -18,7 +18,7 @@ def process_document_task(file_bytes: bytes, raw_text: str = None, expected_data
     trace_id = trace_id or str(uuid.uuid4())
     
     # 3. Clean DI: Get the orchestrator from the factory
-    pipeline = get_process_document_usecase()
+    pipeline = get_processing_pipeline()
     
     # 4. Execute Core Business Logic
     extraction = pipeline.execute(raw_text, document_id, trace_id, expected_data=expected_data)

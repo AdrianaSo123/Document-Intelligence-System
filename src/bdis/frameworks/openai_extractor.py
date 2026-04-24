@@ -2,16 +2,17 @@ import json
 import os
 from openai import OpenAI
 from bdis.ports.extraction_service import IExtractionService
+from bdis.domain.entities import RawExtraction
 
 class OpenAIExtractor(IExtractionService):
     def __init__(self, api_key: str = None):
         key = api_key or os.getenv("OPENAI_API_KEY")
         self.client = OpenAI(api_key=key) if key else None
 
-    def extract_schema(self, raw_text: str) -> dict:
+    def extract_schema(self, raw_text: str) -> RawExtraction:
         if not self.client:
             # Fallback for local testing without key
-            return {"company_name": "Mocked OpenAI", "amount_usd": 999.0}
+            return RawExtraction(company_name="Mocked OpenAI", amount=999.0)
             
         prompt = f"""
         You are a deterministic parsing system. Extract structured data from the provided document.
@@ -38,4 +39,12 @@ class OpenAIExtractor(IExtractionService):
             response_format={"type": "json_object"}
         )
         
-        return json.loads(response.choices[0].message.content)
+        data = json.loads(response.choices[0].message.content)
+        return RawExtraction(
+            company_name=data.get("company_name"),
+            amount=data.get("amount_usd"),
+            currency=data.get("currency"),
+            due_date=data.get("due_date"),
+            status=data.get("status"),
+            invoice_id=data.get("invoice_id")
+        )

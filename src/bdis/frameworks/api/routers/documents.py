@@ -1,11 +1,14 @@
 import uuid
-from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from bdis.frameworks.worker.celery_app import process_document_task
 from bdis.domain.entities import JobStatus
+from bdis.frameworks.api.dependencies import get_fetch_documents_usecase
+from bdis.usecases.fetch_documents import FetchDocumentsUseCase
 
-router = APIRouter(prefix="/jobs", tags=["jobs"])
+router = APIRouter(tags=["documents"])
 
-@router.post("/create")
+@router.post("/documents/upload", status_code=202)
+@router.post("/jobs/create", include_in_schema=False)
 async def create_job(file: UploadFile = File(...)):
     """
     Asynchronously triggers a document processing job.
@@ -30,7 +33,7 @@ async def create_job(file: UploadFile = File(...)):
         "message": "Job enqueued successfully"
     }
 
-@router.get("/{job_id}")
+@router.get("/jobs/{job_id}")
 async def get_job_status(job_id: str):
     """
     Returns the current status and result of a job.
@@ -44,3 +47,26 @@ async def get_job_status(job_id: str):
         return {"job_id": job_id, "status": "COMPLETE", "result": res.result}
     
     return {"job_id": job_id, "status": res.status}
+
+@router.get("/documents")
+async def get_documents(use_case: FetchDocumentsUseCase = Depends(get_fetch_documents_usecase)):
+    """
+    Returns all processed documents from the repository.
+    """
+    return use_case.execute()
+
+@router.get("/insights")
+async def get_insights(use_case: FetchDocumentsUseCase = Depends(get_fetch_documents_usecase)):
+    """
+    Returns aggregated business insights.
+    """
+    docs = use_case.execute()
+    
+    total_revenue = sum(d.amount_usd for d in docs if d.status == JobStatus.VALIDATED)
+    overdue_count = len([d for d in docs if d.status == JobStatus.REVIEW_REQUIRED]) # Simple heuristic
+    
+    return {
+        "total_revenue": total_revenue,
+        "overdue_count": overdue_count,
+        "document_count": len(docs)
+    }

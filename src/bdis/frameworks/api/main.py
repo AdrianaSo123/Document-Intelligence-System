@@ -1,35 +1,32 @@
 import logging
-from fastapi import FastAPI, UploadFile, File, Depends
-from bdis.frameworks.worker.celery_app import process_document_task
-from bdis.frameworks.api.dependencies import get_repository, get_fetch_documents_usecase
-from bdis.usecases.fetch_documents import FetchDocumentsUseCase
-from celery.result import AsyncResult
+from fastapi import FastAPI
+from bdis.frameworks.api.routers import documents
 
-from bdis.frameworks.api.routers import jobs
+# Configure structured logging for production observability
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
-logging.basicConfig(level=logging.INFO)
-app = FastAPI(title="Business Document Intelligence System")
+def create_app() -> FastAPI:
+    """
+    Humble Object Pattern: The main app only wires up the infrastructure.
+    All business logic and routing is delegated to routers and use cases.
+    """
+    app = FastAPI(
+        title="Business Document Intelligence System (BDIS)",
+        description="Clean Architecture AI-Powered Document Ingestion",
+        version="1.0.0"
+    )
 
-app.include_router(jobs.router)
+    # Wire up consolidated routers
+    app.include_router(documents.router)
 
-@app.post("/upload")
-async def upload_document(file: UploadFile = File(...)):
-    # Read bytes immediately
-    file_bytes = await file.read()
-    
-    # Send to Message Queue instead of blocking
-    task = process_document_task.delay(file_bytes)
-    
-    return {"job_id": task.id, "status": "processing"}
+    @app.get("/health")
+    async def health_check():
+        return {"status": "healthy"}
 
-@app.get("/status/{job_id}")
-async def get_status(job_id: str):
-    task_result = AsyncResult(job_id)
-    if task_result.ready():
-        return {"job_id": job_id, "status": "completed", "document_id": task_result.result}
-    return {"job_id": job_id, "status": "processing"}
+    return app
 
-@app.get("/documents")
-async def get_documents(use_case: FetchDocumentsUseCase = Depends(get_fetch_documents_usecase)):
-    # Clean Architecture Enforced: No direct ORM touching
-    return use_case.execute()
+app = create_app()

@@ -1,32 +1,45 @@
 import os
 import pytest
 from datetime import date
-from bdis.domain.entities import DocumentInsight
-from bdis.adapters.repositories import SqliteDocumentRepository, DocumentInsightModel
+from bdis.domain.entities import DocumentExtraction, JobStatus
+from bdis.domain.value_objects import Money
+from bdis.infrastructure.database import init_database
+from bdis.adapters.repositories import SQLDocumentRepository
 
-def test_sqlite_repository_save_and_retrieve():
-    test_db = "sqlite:///test_bdis_integration.db"
-    repo = SqliteDocumentRepository(test_db)
+def test_sql_repository_save_and_retrieve():
+    test_db = "sqlite:///:memory:"
+    _, session_factory = init_database(test_db)
+    repo = SQLDocumentRepository(session_factory)
     
-    insight = DocumentInsight(
-        amount_usd=150.75,
-        status="paid",
+    extraction = DocumentExtraction(
+        document_id="test-doc-001",
+        status=JobStatus.VALIDATED,
+        raw_text="This is a test document.",
+        extracted_data={"company_name": "Test Corp", "amount": 100.0},
+        money=Money(100.0),
+        company_name="Test Corp",
         due_date=date(2026, 4, 15),
-        company_name="Integration Test Corp"
+        trace_id="test-trace-001",
+        confidence=0.95
     )
     
-    # Text Save
-    saved_id = repo.save(insight)
-    assert saved_id is not None
-    assert type(saved_id) is str
+    # 1. Save
+    saved_id = repo.save(extraction)
+    assert saved_id == "test-doc-001"
     
-    # Verify by reading directly via sqlalchemy
-    with repo.SessionLocal() as session:
-        fetched = session.query(DocumentInsightModel).filter_by(id=saved_id).first()
-        assert fetched is not None
-        assert fetched.company_name == "Integration Test Corp"
-        assert fetched.amount_usd == 150.75
-        
+    # 2. Retrieve All
+    all_docs = repo.get_all()
+    assert len(all_docs) >= 1
+    found = next((d for d in all_docs if d.document_id == "test-doc-001"), None)
+    assert found is not None
+    assert found.company_name == "Test Corp"
+    assert found.amount_usd == 100.0
+    assert found.status == JobStatus.VALIDATED
+    
+    # 3. Verify types
+    assert isinstance(found.due_date, date)
+    assert isinstance(found.extracted_data, dict)
+
     # Cleanup
-    if os.path.exists("test_bdis_integration.db"):
-        os.remove("test_bdis_integration.db")
+    if os.path.exists("test_bdis_sql.db"):
+        os.remove("test_bdis_sql.db")

@@ -1,6 +1,7 @@
 import re
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List
+from datetime import datetime
 from bdis.ports.normalizer import INormalizer
 
 class NormalizationStrategy(ABC):
@@ -21,8 +22,6 @@ class AmountNormalizer(NormalizationStrategy):
         try: return float(clean)
         except: return 0.0
 
-from datetime import datetime
-
 class DateNormalizer(NormalizationStrategy):
     def apply(self, data: Dict[str, Any]) -> Dict[str, Any]:
         val = data.get("due_date")
@@ -34,7 +33,8 @@ class DateNormalizer(NormalizationStrategy):
                     m = re.match(r'^(\d{2})/(\d{2})/(\d{4})$', s_val)
                     if m: s_val = f"{m.group(3)}-{m.group(1)}-{m.group(2)}"
                 
-                data["due_date"] = s_val
+                # Convert to date object
+                data["due_date"] = datetime.strptime(s_val, "%Y-%m-%d").date()
             except Exception:
                 pass
         return data

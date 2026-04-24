@@ -37,11 +37,11 @@ class ProcessingPipeline:
             safe_text = self.sanitizer.sanitize(raw_text)
             
             # 2. Extraction
-            # Note: Resilience is now handled at the adapter level (Transparent to Use Case)
-            extracted_data = self.extractor.extract_schema(safe_text)
+            # Returns a typed RawExtraction object (Boundary Protection)
+            extraction_result = self.extractor.extract_schema(safe_text)
             
-            # 3. Normalization
-            normalized_data = self.normalizer.normalize(extracted_data)
+            # 3. Normalization (Expects a dict for strategy pattern)
+            normalized_data = self.normalizer.normalize(extraction_result.to_dict())
             
             # 4. Evaluation (vs Ground Truth)
             evaluation_result = None
@@ -49,15 +49,16 @@ class ProcessingPipeline:
                 evaluation_result = self.evaluator.evaluate(document_id, normalized_data, expected_data)
             
             # 5. Determine Final Status (Policy Encapsulated)
-            confidence = evaluation_result.confidence_score if evaluation_result else 0.8
+            confidence = evaluation_result.confidence_score if evaluation_result else ProcessingPolicy.DEFAULT_CONFIDENCE
             status = ProcessingPolicy.determine_status(confidence, evaluation_result)
             
-            result = DocumentExtraction.from_normalized_data(
+            result = DocumentExtraction.create(
                 document_id=document_id,
                 trace_id=trace_id,
                 status=status,
                 raw_text=safe_text,
                 normalized_data=normalized_data,
+                due_date=normalized_data.get("due_date"),
                 evaluation=evaluation_result,
                 confidence=confidence
             )
@@ -71,12 +72,12 @@ class ProcessingPipeline:
 
         except Exception as e:
             logger.error(f"[PIPELINE] [FAILED] doc_id: {document_id} error: {e}")
-            result = DocumentExtraction(
+            result = DocumentExtraction.create(
                 document_id=document_id,
+                trace_id=trace_id,
                 status=JobStatus.FAILED,
                 raw_text=raw_text,
-                extracted_data={},
-                trace_id=trace_id,
+                normalized_data={},
                 error_message=str(e)
             )
             # Persist the failure
