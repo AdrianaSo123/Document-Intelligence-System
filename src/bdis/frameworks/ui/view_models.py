@@ -7,6 +7,7 @@ class DashboardViewModel(BaseModel):
     amount_usd: float = Field(default=0.0)
     status: str = Field(default="unknown")
     due_date: Optional[str] = None
+    s3_uri: Optional[str] = None
     
     @property
     def is_high_risk(self) -> bool:

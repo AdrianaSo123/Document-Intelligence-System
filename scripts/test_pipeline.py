@@ -25,19 +25,25 @@ def run_phase4_demo():
     print("\n🚀 Starting Phase 4 Reliability & Evaluation Demo\n" + "="*50)
     
     # 1. Setup Dependencies (Manual DI for the script)
-    repo = SQLDocumentRepository("sqlite:///local_test.db")
+    from bdis.infrastructure.database import init_database
+    db_url = "sqlite:///local_test.db"
+    _, session_factory = init_database(db_url)
+    repo = SQLDocumentRepository(session_factory)
     
     # Setup Extractor with Resilience
     raw_extractor = OpenAIExtractor(os.getenv("OPENAI_API_KEY"))
     # Wrap extraction with circuit breaker logic (as defined in dependencies.py)
     raw_extractor.extract_schema = resilience_wrapper("openai_service")(raw_extractor.extract_schema)
     
+    from bdis.adapters.s3_storage import S3StorageAdapter
+    
     pipeline = ProcessingPipeline(
         extractor=raw_extractor,
         normalizer=DocumentNormalizer(),
         repository=repo,
         evaluator=ExactMatchEvaluator(),
-        sanitizer=RegexPIISanitizer()
+        sanitizer=RegexPIISanitizer(),
+        storage=S3StorageAdapter()
     )
 
     # 2. Mock messier input with PII

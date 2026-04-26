@@ -39,7 +39,8 @@ def get_processing_pipeline():
         normalizer=DocumentNormalizer(),
         repository=get_repository(),
         evaluator=ExactMatchEvaluator(),
-        sanitizer=RegexPIISanitizer()
+        sanitizer=RegexPIISanitizer(),
+        storage=get_storage()
     )
 
 def get_fetch_documents_usecase():

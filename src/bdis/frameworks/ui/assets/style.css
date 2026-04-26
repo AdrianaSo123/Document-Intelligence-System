@@ -1,48 +1,125 @@
 /* =========================================
-   BDIS Enterprise Design System
+   BDIS Enterprise Design System (Stripe V2)
    ========================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 /* --- Anti-Chrome Mechanics --- */
 #MainMenu { display: none; }
 footer { display: none; }
-header[data-testid="stHeader"] { background-color: transparent !important; }
+header[data-testid="stHeader"] { background: transparent !important; }
 
-/* Strip white top-padding out to give Edge-to-Edge layout */
+/* Root Tokens */
+:root {
+    --stripe-blue: #635BFF;
+    --stripe-blue-hover: #5433FF;
+    --stripe-slate: #0A2540;
+    --stripe-bg: #F6F9FC;
+    --stripe-card: #FFFFFF;
+    --stripe-text: #425466;
+    --stripe-text-dark: #0A2540;
+    --stripe-border: #E6E6E6;
+    --card-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+    --hover-shadow: 0 7px 14px rgba(50, 50, 93, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* Global Reset */
+html, body, [data-testid="stAppViewContainer"] {
+    font-family: 'Inter', sans-serif !important;
+    background-color: var(--stripe-bg) !important;
+    color: var(--stripe-text) !important;
+}
+
 .block-container {
     padding-top: 2rem !important;
+    max-width: 1200px !important;
 }
 
-/* --- Native CSS Custom Properties --- */
-:root {
-    --glass-bg: rgba(255, 255, 255, 0.03);
-    --border-subtle: rgba(255, 255, 255, 0.1);
-    --hover-shift: translateY(-2px);
-    --shadow-bloom: 0px 4px 15px rgba(0, 242, 254, 0.15);
+/* Sidebar Styling - Stripe Style (Light Gray) */
+[data-testid="stSidebar"] {
+    background-color: #FFFFFF !important;
+    border-right: 1px solid var(--stripe-border) !important;
 }
 
-/* --- Glassmorphism Enhancements --- */
-[data-testid="stDataFrame"] {
-    background: var(--glass-bg);
-    border-radius: 12px;
-    border: 1px solid var(--border-subtle);
-    backdrop-filter: blur(10px);
+/* Heading Styling */
+h1, h2, h3 {
+    font-family: 'Inter', sans-serif !important;
+    color: var(--stripe-text-dark) !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em !important;
 }
 
-/* Target Metric divs seamlessly */
-[data-testid="stMetricValue"] {
-    color: #4CAF50; /* Base success fallback */
-}
-
-div[data-testid="metric-container"] {
-    background: var(--glass-bg);
-    border: 1px solid var(--border-subtle);
-    padding: 1.2rem;
+/* Custom Card Class */
+.stripe-card {
+    background: var(--stripe-card);
+    border: 1px solid var(--stripe-border);
+    padding: 24px;
     border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
     transition: all 0.2s ease;
 }
 
-div[data-testid="metric-container"]:hover {
-    transform: var(--hover-shift);
-    box-shadow: var(--shadow-bloom);
-    border: 1px solid rgba(0, 242, 254, 0.5);
+/* Button Styling (High Fidelity) */
+.stButton button {
+    background-color: var(--stripe-blue) !important;
+    color: #FFFFFF !important;
+    border-radius: 5px !important;
+    padding: 8px 16px !important;
+    font-weight: 500 !important;
+    border: none !important;
+    box-shadow: var(--card-shadow) !important;
+    transition: all 0.15s ease !important;
+    width: 100%;
 }
+
+.stButton button:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--hover-shadow) !important;
+    background-color: var(--stripe-blue-hover) !important;
+}
+
+/* Custom Table Styling */
+.stripe-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.stripe-table th {
+    text-align: left;
+    padding: 12px 16px;
+    background: #F7FAFC;
+    color: #4F566B;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    border-bottom: 1px solid #E3E8EE;
+}
+
+.stripe-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #E3E8EE;
+    color: #3C4257;
+    font-size: 0.85rem;
+}
+
+.stripe-table tr:hover {
+    background-color: #F9FAFB;
+}
+
+/* Status Badges */
+.status-pill {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-valid { background: #CBF4C9; color: #0E6245; }
+.status-pending { background: #FDEBB2; color: #854D0E; }
+.status-error { background: #FED7D7; color: #9B2C2C; }

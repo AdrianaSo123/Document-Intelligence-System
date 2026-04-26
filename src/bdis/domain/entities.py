@@ -68,6 +68,7 @@ class DocumentExtraction:
         due_date: Optional[date] = None,
         evaluation: Optional[EvaluationResult] = None,
         confidence: float = 0.0,
+        s3_uri: Optional[str] = None,
         error_message: Optional[str] = None
     ) -> 'DocumentExtraction':
         """
@@ -84,6 +85,7 @@ class DocumentExtraction:
             due_date=due_date,
             confidence=confidence,
             evaluation=evaluation,
+            s3_uri=s3_uri,
             error_message=error_message
         )
 

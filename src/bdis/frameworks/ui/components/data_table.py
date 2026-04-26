@@ -1,33 +1,34 @@
-import pandas as pd
 import streamlit as st
 
 def render_data_table(data):
-    dicts_list = []
+    if not data:
+        st.info("No records found in the ledger.")
+        return
+
+    # Build rows first
+    rows_html = ""
     for d in data:
-        row = d.model_dump()
-        # Clean Architecture: We strictly consume the pre-calculated boolean from the ViewModel. No logic interpolation.
-        row["is_high_risk"] = d.is_high_risk 
-        row["s3_uri"] = d.s3_uri
-        dicts_list.append(row)
+        status_class = "status-pending"
+        status_text = d.status.replace("_", " ").title()
+        if "validated" in d.status.lower() or "complete" in d.status.lower():
+            status_class = "status-valid"
+        elif "error" in d.status.lower() or "failed" in d.status.lower():
+            status_class = "status-error"
+            
+        due_date = d.due_date if d.due_date else "—"
         
-    df = pd.DataFrame(dicts_list)
-    if not df.empty:
-        columns_to_show = ["company_name", "amount_usd", "status", "due_date", "is_high_risk", "s3_uri"]
-        df = df[columns_to_show]
-        
-        st.dataframe(
-            df,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "company_name": st.column_config.TextColumn("Vendor"),
-                "amount_usd": st.column_config.NumberColumn(
-                    "Obligation",
-                    format="$ %.2f"
-                ),
-                "status": st.column_config.TextColumn("State"),
-                "due_date": st.column_config.TextColumn("Due Date"),
-                "is_high_risk": st.column_config.CheckboxColumn("Fraud Alert"),
-                "s3_uri": st.column_config.LinkColumn("S3 Object URI")
-            }
-        )
+        # Use a single line per row to avoid markdown line-break confusion
+        rows_html += f'<tr><td style="font-weight: 500; color: #1A1F36;">{d.company_name}</td><td>${d.amount_usd:,.2f}</td><td style="color: #697386;">{due_date}</td><td><span class="status-pill {status_class}">{status_text}</span></td></tr>'
+    
+    # Combine everything into one compact string
+    html_string = (
+        '<div style="width: 100%; overflow-x: auto;">'
+        '<table class="stripe-table">'
+        '<thead><tr><th>Customer / Vendor</th><th>Amount (USD)</th><th>Due Date</th><th>Status</th></tr></thead>'
+        f'<tbody>{rows_html}</tbody>'
+        '</table>'
+        '</div>'
+    )
+    
+    # Use st.markdown with strict unsafe_allow_html
+    st.markdown(html_string, unsafe_allow_html=True)

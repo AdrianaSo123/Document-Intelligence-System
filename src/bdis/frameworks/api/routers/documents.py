@@ -24,7 +24,8 @@ async def create_job(file: UploadFile = File(...)):
     task = process_document_task.delay(
         file_bytes=file_bytes, 
         document_id=document_id, 
-        trace_id=trace_id
+        trace_id=trace_id,
+        filename=file.filename
     )
     
     return {

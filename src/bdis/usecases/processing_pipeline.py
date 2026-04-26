@@ -8,6 +8,7 @@ from bdis.ports.document_repository import IDocumentRepository
 from bdis.ports.evaluator import IEvaluator
 from bdis.domain.policies import ProcessingPolicy
 from bdis.ports.sanitizer import ISanitizer
+from bdis.ports.file_storage import IFileStorage
 
 logger = logging.getLogger(__name__)
 
@@ -21,17 +22,24 @@ class ProcessingPipeline:
         normalizer: INormalizer,
         repository: IDocumentRepository,
         evaluator: IEvaluator,
-        sanitizer: ISanitizer
+        sanitizer: ISanitizer,
+        storage: IFileStorage
     ):
         self.extractor = extractor
         self.normalizer = normalizer
         self.repository = repository
         self.evaluator = evaluator
         self.sanitizer = sanitizer
+        self.storage = storage
 
-    def execute(self, raw_text: str, document_id: str, trace_id: str, expected_data: Dict[str, Any] = None) -> DocumentExtraction:
+    def execute(self, raw_text: str, document_id: str, trace_id: str, file_bytes: bytes = None, filename: str = "document.pdf", expected_data: Dict[str, Any] = None) -> DocumentExtraction:
         logger.info(f"[PIPELINE] [START] trace_id: {trace_id} doc_id: {document_id}")
         
+        s3_uri = None
+        if file_bytes:
+            logger.info(f"[PIPELINE] [STORAGE] Archiving original file...")
+            s3_uri = self.storage.upload_file(file_bytes, filename)
+            
         try:
             # 1. Sanitization (Policy: Never send PII to AI)
             safe_text = self.sanitizer.sanitize(raw_text)
@@ -60,7 +68,8 @@ class ProcessingPipeline:
                 normalized_data=normalized_data,
                 due_date=normalized_data.get("due_date"),
                 evaluation=evaluation_result,
-                confidence=confidence
+                confidence=confidence,
+                s3_uri=s3_uri
             )
             
             # 6. Persistence

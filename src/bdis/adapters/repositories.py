@@ -21,6 +21,7 @@ class DocumentExtractionModel(Base):
     error_message = Column(String, nullable=True)
     extracted_data = Column(JSON, nullable=True)
     s3_uri = Column(String, nullable=True)
+    raw_text = Column(String, nullable=True)
     created_at = Column(Date)
 
 class SQLDocumentRepository(IDocumentRepository):
@@ -46,6 +47,7 @@ class SQLDocumentRepository(IDocumentRepository):
             error_message=extraction.error_message,
             extracted_data=extracted_data_json,
             s3_uri=extraction.s3_uri,
+            raw_text=extraction.raw_text,
             created_at=extraction.created_at
         )
         
@@ -62,7 +64,7 @@ class SQLDocumentRepository(IDocumentRepository):
                 DocumentExtraction(
                     document_id=r.document_id,
                     status=r.status,
-                    raw_text="", # Not stored in model currently
+                    raw_text=r.raw_text or "",
                     extracted_data=r.extracted_data or {},
                     money=Money(r.amount_usd),
                     company_name=r.company_name,
