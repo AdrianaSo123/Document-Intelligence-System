@@ -1,4 +1,5 @@
 import os
+from bdis.core.config import settings
 from bdis.adapters.repositories import SQLDocumentRepository
 from bdis.adapters.s3_storage import S3StorageAdapter
 from bdis.frameworks.openai_extractor import OpenAIExtractor
@@ -17,15 +18,14 @@ _session_factory = None
 def get_repository():
     global _session_factory
     if _session_factory is None:
-        db_url = os.getenv("DATABASE_URL", "sqlite:///bdis_prod.db")
-        _, _session_factory = init_database(db_url)
+        _, _session_factory = init_database(settings.DATABASE_URL)
     return SQLDocumentRepository(_session_factory)
 
 def get_storage():
     return S3StorageAdapter()
 
 def get_extractor():
-    extractor = OpenAIExtractor(os.getenv("OPENAI_API_KEY"))
+    extractor = OpenAIExtractor(settings.OPENAI_API_KEY)
     # Apply shared resilience policy for the "openai_service"
     extractor.extract_schema = resilience_wrapper("openai_service")(extractor.extract_schema)
     return extractor

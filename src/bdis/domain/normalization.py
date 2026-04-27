@@ -25,18 +25,33 @@ class AmountNormalizer(NormalizationStrategy):
 class DateNormalizer(NormalizationStrategy):
     def apply(self, data: Dict[str, Any]) -> Dict[str, Any]:
         val = data.get("due_date")
-        if val:
-            try:
-                s_val = str(val).strip()
-                # Basic string normalization
-                if not re.match(r'^\d{4}-\d{2}-\d{2}$', s_val):
-                    m = re.match(r'^(\d{2})/(\d{2})/(\d{4})$', s_val)
-                    if m: s_val = f"{m.group(3)}-{m.group(1)}-{m.group(2)}"
-                
-                # Convert to date object
+        if not val:
+            return data
+            
+        try:
+            s_val = str(val).strip()
+            # 1. Standard ISO Format (YYYY-MM-DD)
+            if re.match(r'^\d{4}-\d{2}-\d{2}$', s_val):
                 data["due_date"] = datetime.strptime(s_val, "%Y-%m-%d").date()
-            except Exception:
-                pass
+                return data
+
+            # 2. US Format (MM/DD/YYYY)
+            m_us = re.match(r'^(\d{1,2})/(\d{1,2})/(\d{4})$', s_val)
+            if m_us:
+                s_val = f"{m_us.group(3)}-{m_us.group(1).zfill(2)}-{m_us.group(2).zfill(2)}"
+                data["due_date"] = datetime.strptime(s_val, "%Y-%m-%d").date()
+                return data
+
+            # 3. Descriptive Month Format (e.g., October 23, 2026)
+            for fmt in ["%B %d, %Y", "%b %d, %Y", "%d %B %Y", "%d %b %Y"]:
+                try:
+                    data["due_date"] = datetime.strptime(s_val, fmt).date()
+                    return data
+                except ValueError:
+                    continue
+
+        except Exception:
+            pass
         return data
 
 class StatusNormalizer(NormalizationStrategy):

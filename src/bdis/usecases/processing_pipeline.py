@@ -44,9 +44,20 @@ class ProcessingPipeline:
             # 1. Sanitization (Policy: Never send PII to AI)
             safe_text = self.sanitizer.sanitize(raw_text)
             
-            # 2. Extraction
-            # Returns a typed RawExtraction object (Boundary Protection)
-            extraction_result = self.extractor.extract_schema(safe_text)
+            # 2. Extraction (Spec Compliance: Retry once on failure)
+            extraction_result = None
+            last_error = None
+            for attempt in range(2):
+                try:
+                    extraction_result = self.extractor.extract_schema(safe_text)
+                    break # Success!
+                except Exception as e:
+                    logger.warning(f"[PIPELINE] Extraction attempt {attempt+1} failed: {e}")
+                    last_error = e
+                    if attempt == 0: continue # Retry
+            
+            if not extraction_result:
+                raise last_error or Exception("Extraction failed after retries")
             
             # 3. Normalization (Expects a dict for strategy pattern)
             normalized_data = self.normalizer.normalize(extraction_result.to_dict())

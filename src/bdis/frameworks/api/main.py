@@ -1,12 +1,11 @@
 import logging
 from fastapi import FastAPI
-from bdis.frameworks.api.routers import documents
+from fastapi.middleware.cors import CORSMiddleware
+from bdis.frameworks.api.routers import documents, jobs
+from bdis.core.logging_config import setup_json_logging
 
-# Configure structured logging for production observability
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# Configure structured JSON logging
+setup_json_logging()
 logger = logging.getLogger(__name__)
 
 def create_app() -> FastAPI:
@@ -20,8 +19,17 @@ def create_app() -> FastAPI:
         version="1.0.0"
     )
 
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     # Wire up consolidated routers
     app.include_router(documents.router)
+    app.include_router(jobs.router)
 
     @app.get("/health")
     async def health_check():

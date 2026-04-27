@@ -5,6 +5,11 @@ services:
     image: redis:alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     volumes:
       - redis_data:/data
 
@@ -16,6 +21,11 @@ services:
       POSTGRES_DB: bdis_db
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bdis_user -d bdis_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -32,58 +42,48 @@ services:
       - minio_data:/data
 
   api:
-    build: .
+    build:
+      context: .
+      target: api
     ports:
       - "8000:8000"
-    volumes:
-      - .:/app
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - DATABASE_URL=postgresql://bdis_user:bdis_password@postgres:5432/bdis_db
-      - AWS_ACCESS_KEY_ID=minioadmin
-      - AWS_SECRET_ACCESS_KEY=minioadmin
-      - AWS_ENDPOINT_URL=http://minio:9000
-      - AWS_DEFAULT_REGION=us-east-1
-      - S3_BUCKET_NAME=bdis-invoices
       - OPENAI_API_KEY=${OPENAI_API_KEY}
     depends_on:
-      - redis
-      - postgres
-      - minio
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   worker:
-    build: .
-    command: celery -A bdis.frameworks.worker.celery_app worker --loglevel=info
-    volumes:
-      - .:/app
+    build:
+      context: .
+      target: worker
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - DATABASE_URL=postgresql://bdis_user:bdis_password@postgres:5432/bdis_db
-      - AWS_ACCESS_KEY_ID=minioadmin
-      - AWS_SECRET_ACCESS_KEY=minioadmin
-      - AWS_ENDPOINT_URL=http://minio:9000
-      - AWS_DEFAULT_REGION=us-east-1
-      - S3_BUCKET_NAME=bdis-invoices
       - OPENAI_API_KEY=${OPENAI_API_KEY}
     depends_on:
-      - redis
-      - postgres
-      - minio
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   ui:
-    build: 
+    build:
       context: .
-      dockerfile: Dockerfile.ui
+      target: ui
     ports:
       - "8501:8501"
-    volumes:
-      - .:/app
     environment:
       - API_BASE_URL=http://api:8000
     depends_on:
-      - api
+      api:
+        condition: service_started
 
 volumes:
   redis_data:

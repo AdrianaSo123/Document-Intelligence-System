@@ -1,125 +1,111 @@
-/* =========================================
-   BDIS Enterprise Design System (Stripe V2)
-   ========================================= */
+/* 
+   BDIS "Stripe Edition" Design System
+   Absolute consistency with Stripe Dashboard aesthetics.
+   Focus: Clean lines, #635BFF accent, Inter typography, Soft shadows.
+*/
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-/* --- Anti-Chrome Mechanics --- */
-#MainMenu { display: none; }
-footer { display: none; }
-header[data-testid="stHeader"] { background: transparent !important; }
-
-/* Root Tokens */
 :root {
+    --bg-main: #F7FAFC;
+    --white: #FFFFFF;
     --stripe-blue: #635BFF;
-    --stripe-blue-hover: #5433FF;
-    --stripe-slate: #0A2540;
-    --stripe-bg: #F6F9FC;
-    --stripe-card: #FFFFFF;
-    --stripe-text: #425466;
-    --stripe-text-dark: #0A2540;
-    --stripe-border: #E6E6E6;
-    --card-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
-    --hover-shadow: 0 7px 14px rgba(50, 50, 93, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+    --stripe-blue-hover: #7A73FF;
+    --slate-dark: #1A1F36;
+    --slate-text: #4F566B;
+    --slate-light: #E3E8EE;
+    --border-radius: 8px;
+    --card-shadow: 0 2px 5px 0 rgba(60, 66, 87, 0.1), 0 1px 1px 0 rgba(0, 0, 0, 0.07);
 }
 
 /* Global Reset */
-html, body, [data-testid="stAppViewContainer"] {
-    font-family: 'Inter', sans-serif !important;
-    background-color: var(--stripe-bg) !important;
-    color: var(--stripe-text) !important;
+.stApp {
+    background-color: var(--bg-main) !important;
 }
 
-.block-container {
-    padding-top: 2rem !important;
-    max-width: 1200px !important;
+h1, h2, h3, h4, h5, h6, p, span, div, label {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
 }
 
-/* Sidebar Styling - Stripe Style (Light Gray) */
-[data-testid="stSidebar"] {
-    background-color: #FFFFFF !important;
-    border-right: 1px solid var(--stripe-border) !important;
+h1 {
+    color: var(--slate-dark) !important;
+    font-size: 2.25rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.025em !important;
 }
 
-/* Heading Styling */
-h1, h2, h3 {
-    font-family: 'Inter', sans-serif !important;
-    color: var(--stripe-text-dark) !important;
+h2 {
+    color: var(--slate-dark) !important;
+    font-size: 1.5rem !important;
     font-weight: 600 !important;
-    letter-spacing: -0.01em !important;
 }
 
-/* Custom Card Class */
-.stripe-card {
-    background: var(--stripe-card);
-    border: 1px solid var(--stripe-border);
-    padding: 24px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    margin-bottom: 20px;
-    transition: all 0.2s ease;
-}
-
-/* Button Styling (High Fidelity) */
-.stButton button {
-    background-color: var(--stripe-blue) !important;
-    color: #FFFFFF !important;
-    border-radius: 5px !important;
-    padding: 8px 16px !important;
-    font-weight: 500 !important;
-    border: none !important;
+/* Stripe-style Metric Cards */
+.metric-card {
+    background: var(--white) !important;
+    border: 1px solid var(--slate-light) !important;
+    border-radius: var(--border-radius) !important;
+    padding: 24px !important;
     box-shadow: var(--card-shadow) !important;
-    transition: all 0.15s ease !important;
-    width: 100%;
+    transition: box-shadow 0.2s ease, transform 0.2s ease !important;
 }
 
-.stButton button:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--hover-shadow) !important;
-    background-color: var(--stripe-blue-hover) !important;
+.metric-card:hover {
+    box-shadow: 0 7px 14px 0 rgba(60, 66, 87, 0.1), 0 3px 6px 0 rgba(0, 0, 0, 0.08) !important;
 }
 
-/* Custom Table Styling */
-.stripe-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+.metric-label {
+    color: var(--slate-text) !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    margin-bottom: 8px !important;
 }
 
-.stripe-table th {
-    text-align: left;
-    padding: 12px 16px;
-    background: #F7FAFC;
-    color: #4F566B;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    font-weight: 600;
-    border-bottom: 1px solid #E3E8EE;
+.metric-value {
+    color: var(--slate-dark) !important;
+    font-size: 1.75rem !important;
+    font-weight: 700 !important;
 }
 
-.stripe-table td {
-    padding: 14px 16px;
-    border-bottom: 1px solid #E3E8EE;
-    color: #3C4257;
-    font-size: 0.85rem;
+/* Sidebar Navigation */
+section[data-testid="stSidebar"] {
+    background-color: var(--white) !important;
+    border-right: 1px solid var(--slate-light) !important;
+    width: 280px !important;
 }
 
-.stripe-table tr:hover {
-    background-color: #F9FAFB;
+/* Tabs: Stripe-style underline */
+.stTabs [data-baseweb="tab-list"] {
+    border-bottom: 1px solid var(--slate-light) !important;
+    gap: 20px !important;
 }
 
-/* Status Badges */
-.status-pill {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
+.stTabs [data-baseweb="tab"] {
+    color: var(--slate-text) !important;
+    font-weight: 500 !important;
+    padding: 12px 0 !important;
 }
 
-.status-valid { background: #CBF4C9; color: #0E6245; }
-.status-pending { background: #FDEBB2; color: #854D0E; }
-.status-error { background: #FED7D7; color: #9B2C2C; }
+.stTabs [aria-selected="true"] {
+    color: var(--stripe-blue) !important;
+    border-bottom: 2px solid var(--stripe-blue) !important;
+}
+
+/* Table: Stripe Ledger Look */
+.stDataFrame {
+    border: 1px solid var(--slate-light) !important;
+    border-radius: var(--border-radius) !important;
+}
+
+/* Progress Bars: Stripe Blue */
+div[data-testid="stProgress"] > div > div {
+    background-color: var(--stripe-blue) !important;
+}
+
+/* Custom Success/Warning Indicators */
+.badge-success { background: #E3FBE3; color: #0E6245; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+.badge-warn { background: #FFF9E6; color: #946F00; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+.badge-error { background: #FEE2E2; color: #991B1B; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+
+/* Hide Streamlit Branding */
+#MainMenu, footer, header { visibility: hidden; }

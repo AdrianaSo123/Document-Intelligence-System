@@ -21,7 +21,7 @@ def test_api_client_json_mapping(mock_get):
     """Proves raw JSON safely maps to rigid DTOs"""
     fake_response = Mock()
     fake_response.json.return_value = [
-        {"document_id": "1", "company_name": "TestCorp", "amount_usd": 15000, "status": "unpaid"}
+        {"document_id": "1", "company_name": "TestCorp", "amount_usd": 15000, "status": "unpaid", "is_high_risk": True}
     ]
     mock_get.return_value = fake_response
     

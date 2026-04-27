@@ -7,48 +7,6 @@ from bdis.usecases.fetch_documents import FetchDocumentsUseCase
 
 router = APIRouter(tags=["documents"])
 
-@router.post("/documents/upload", status_code=202)
-@router.post("/jobs/create", include_in_schema=False)
-async def create_job(file: UploadFile = File(...)):
-    """
-    Asynchronously triggers a document processing job.
-    Returns a job_id for polling.
-    """
-    file_bytes = await file.read()
-    
-    # Generate IDs at the entry point
-    document_id = str(uuid.uuid4())
-    trace_id = str(uuid.uuid4())
-    
-    # Enqueue the task with the IDs
-    task = process_document_task.delay(
-        file_bytes=file_bytes, 
-        document_id=document_id, 
-        trace_id=trace_id,
-        filename=file.filename
-    )
-    
-    return {
-        "job_id": task.id,
-        "status": JobStatus.PENDING,
-        "message": "Job enqueued successfully"
-    }
-
-@router.get("/jobs/{job_id}")
-async def get_job_status(job_id: str):
-    """
-    Returns the current status and result of a job.
-    """
-    from bdis.frameworks.worker.celery_app import celery_app
-    res = celery_app.AsyncResult(job_id)
-    
-    if res.ready():
-        if res.failed():
-            return {"job_id": job_id, "status": JobStatus.FAILED, "error": str(res.result)}
-        return {"job_id": job_id, "status": "COMPLETE", "result": res.result}
-    
-    return {"job_id": job_id, "status": res.status}
-
 @router.get("/documents")
 async def get_documents(use_case: FetchDocumentsUseCase = Depends(get_fetch_documents_usecase)):
     """
@@ -59,15 +17,25 @@ async def get_documents(use_case: FetchDocumentsUseCase = Depends(get_fetch_docu
 @router.get("/insights")
 async def get_insights(use_case: FetchDocumentsUseCase = Depends(get_fetch_documents_usecase)):
     """
-    Returns aggregated business insights.
+    Returns aggregated business insights with correct currency normalization.
     """
     docs = use_case.execute()
+    from bdis.core.financials import convert_to_usd
     
-    total_revenue = sum(d.amount_usd for d in docs if d.status == JobStatus.VALIDATED)
-    overdue_count = len([d for d in docs if d.status == JobStatus.REVIEW_REQUIRED]) # Simple heuristic
+    total_revenue_usd = 0.0
+    currency_counts = {}
+    
+    for d in docs:
+        if d.status == JobStatus.VALIDATED:
+            total_revenue_usd += convert_to_usd(d.amount_usd, d.currency)
+            
+        currency_counts[d.currency] = currency_counts.get(d.currency, 0) + 1
+    
+    overdue_count = len([d for d in docs if d.status == JobStatus.REVIEW_REQUIRED])
     
     return {
-        "total_revenue": total_revenue,
+        "total_revenue_usd": total_revenue_usd,
         "overdue_count": overdue_count,
-        "document_count": len(docs)
+        "document_count": len(docs),
+        "currency_breakdown": currency_counts
     }

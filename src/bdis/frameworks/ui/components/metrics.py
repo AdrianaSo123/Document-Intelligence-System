@@ -1,30 +1,37 @@
 import streamlit as st
 
 def render_metrics(data):
+    """
+    Stripe-style Metric Summary: Consistent with dashboard ledger.
+    """
     total_docs = len(data)
-    total_value = sum(d.amount_usd for d in data)
+    from bdis.core.financials import convert_to_usd
+    
+    total_value_usd = sum(convert_to_usd(d.amount_usd, d.currency) for d in data)
     high_risk_count = sum(1 for d in data if d.is_high_risk)
     
     col1, col2, col3 = st.columns(3)
     
-    metrics = [
-        ("Documents Processed", str(total_docs), "📄"),
-        ("Total Revenue Parsed", f"${total_value:,.2f}", "💰"),
-        ("High Risk Anomalies", str(high_risk_count), "⚠️")
-    ]
-    
-    for col, (label, value, icon) in zip([col1, col2, col3], metrics):
-        with col:
-            st.markdown(f"""
-                <div class="stripe-card">
-                    <div style="font-size: 0.8rem; color: #697386; font-weight: 500; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.025em;">
-                        {label}
-                    </div>
-                    <div style="font-size: 1.6rem; font-weight: 600; color: #1A1F36; margin-bottom: 8px;">
-                        {value}
-                    </div>
-                    <div style="font-size: 0.8rem; color: #24B47E; font-weight: 500; display: flex; align-items: center;">
-                        <span style="margin-right: 4px;">↑</span> 12.5% <span style="color: #697386; margin-left: 4px; font-weight: 400;">vs last month</span>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
+    with col1:
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">Processed documents</div>
+                <div class="metric-value">{total_docs}</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+    with col2:
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">Total valuation (USD)</div>
+                <div class="metric-value">${total_value_usd:,.2f}</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+    with col3:
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">Anomaly exposure</div>
+                <div class="metric-value">{high_risk_count}</div>
+            </div>
+        """, unsafe_allow_html=True)

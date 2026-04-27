@@ -16,7 +16,11 @@ class ExtractionResultDTO(BaseModel):
     document_id: str
     status: str
     amount_usd: float
+    currency: str = "USD"
     company_name: Optional[str]
     confidence: float
+    is_high_risk: bool = False
     trace_id: str
     created_at: str
+    s3_uri: Optional[str] = None
+    raw_text: Optional[str] = None

@@ -20,6 +20,10 @@ def test_normalizer_date_normalization():
     assert normalizer.normalize({"due_date": "2024-01-01"})["due_date"] == date(2024, 1, 1)
     # Slash format
     assert normalizer.normalize({"due_date": "12/31/2023"})["due_date"] == date(2023, 12, 31)
+    # Month name format
+    assert normalizer.normalize({"due_date": "October 23, 2026"})["due_date"] == date(2026, 10, 23)
+    # Short month name format
+    assert normalizer.normalize({"due_date": "23 Oct 2026"})["due_date"] == date(2026, 10, 23)
 
 def test_sanitizer_redaction():
     sanitizer = RegexPIISanitizer()

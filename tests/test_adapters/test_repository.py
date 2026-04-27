@@ -16,7 +16,7 @@ def test_sql_repository_save_and_retrieve():
         status=JobStatus.VALIDATED,
         raw_text="This is a test document.",
         extracted_data={"company_name": "Test Corp", "amount": 100.0},
-        money=Money(100.0),
+        money=Money(100.0, "EUR"),
         company_name="Test Corp",
         due_date=date(2026, 4, 15),
         trace_id="test-trace-001",
@@ -34,6 +34,7 @@ def test_sql_repository_save_and_retrieve():
     assert found is not None
     assert found.company_name == "Test Corp"
     assert found.amount_usd == 100.0
+    assert found.currency == "EUR"
     assert found.status == JobStatus.VALIDATED
     
     # 3. Verify types

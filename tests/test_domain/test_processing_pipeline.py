@@ -11,7 +11,8 @@ def mock_dependencies():
         "normalizer": Mock(),
         "repository": Mock(),
         "evaluator": Mock(),
-        "sanitizer": Mock()
+        "sanitizer": Mock(),
+        "storage": Mock()
     }
 
 def test_pipeline_execution_success(mock_dependencies):
