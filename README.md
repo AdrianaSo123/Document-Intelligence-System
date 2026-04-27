@@ -106,8 +106,3 @@ python3 scripts/test_pipeline.py
 - [x] Phase 4: Reliability & Evaluation Layer
 - [x] Phase 5: De-duplication & Production Hardening
 - [ ] **Phase 6: Multi-Tenant Workspace Architecture** (Next)
-
----
-
-## 📄 License
-MIT License. Created by AdrianaSo.
