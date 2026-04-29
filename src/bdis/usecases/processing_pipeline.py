@@ -32,13 +32,13 @@ class ProcessingPipeline:
         self.sanitizer = sanitizer
         self.storage = storage
 
-    def execute(self, raw_text: str, document_id: str, trace_id: str, file_bytes: bytes = None, filename: str = "document.pdf", expected_data: Dict[str, Any] = None) -> DocumentExtraction:
+    def execute(self, raw_text: str, document_id: str, trace_id: str, workspace_id: str, file_bytes: bytes = None, filename: str = "document.pdf", expected_data: Dict[str, Any] = None) -> DocumentExtraction:
         logger.info(f"[PIPELINE] [START] trace_id: {trace_id} doc_id: {document_id}")
         
         s3_uri = None
         if file_bytes:
             logger.info(f"[PIPELINE] [STORAGE] Archiving original file...")
-            s3_uri = self.storage.upload_file(file_bytes, filename)
+            s3_uri = self.storage.upload_file(workspace_id, document_id, file_bytes, filename)
             
         try:
             # 1. Sanitization (Policy: Never send PII to AI)
@@ -85,7 +85,7 @@ class ProcessingPipeline:
             
             # 6. Persistence
             logger.info(f"[PIPELINE] [PERSISTENCE] START doc_id: {document_id}")
-            self.repository.save(result) 
+            self.repository.save(workspace_id, result)
             
             logger.info(f"[PIPELINE] [COMPLETE] doc_id: {document_id} status: {status}")
             return result
@@ -101,5 +101,5 @@ class ProcessingPipeline:
                 error_message=str(e)
             )
             # Persist the failure
-            self.repository.save(result)
+            self.repository.save(workspace_id, result)
             return result

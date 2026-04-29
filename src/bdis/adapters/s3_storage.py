@@ -40,17 +40,20 @@ class S3StorageAdapter(IFileStorage):
         finally:
             self._bucket_checked = True
 
-    def upload_file(self, file_bytes: bytes, filename: str) -> str:
+    def upload_file(self, workspace_id: str, document_id: str, file_bytes: bytes, filename: str) -> str:
+        # Phase 6: Enterprise keyspace partitioning by workspace/document.
         unique_name = f"{uuid.uuid4()}_{filename}"
+        key = f"workspaces/{workspace_id}/documents/{document_id}/{unique_name}"
         try:
             self._ensure_bucket_exists()
-            self.s3_client.put_object(Bucket=self.bucket, Key=unique_name, Body=file_bytes)
-            return f"s3://{self.bucket}/{unique_name}"
+            self.s3_client.put_object(Bucket=self.bucket, Key=key, Body=file_bytes)
+            return f"s3://{self.bucket}/{key}"
         except Exception as e:
             logging.warning(f"S3 Upload failed (falling back to local): {e}")
             # Fallback to local filesystem storage for portfolio/local dev
-            local_path = os.path.join("storage", unique_name)
-            os.makedirs("storage", exist_ok=True)
+            local_dir = os.path.join("storage", "workspaces", workspace_id, "documents", document_id)
+            os.makedirs(local_dir, exist_ok=True)
+            local_path = os.path.join(local_dir, unique_name)
             with open(local_path, "wb") as f:
                 f.write(file_bytes)
             return f"local://{local_path}"

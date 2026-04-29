@@ -22,6 +22,18 @@ class Settings:
     # Fallback rates if no live FX service is connected
     FIXED_FX_RATES: dict = None
 
+    # Auth (Phase 6)
+    # - dev_headers: allow X-BDIS-* headers (dev only)
+    # - none: reject identity headers (default until OIDC is implemented)
+    BDIS_AUTH_MODE: str = os.getenv("BDIS_AUTH_MODE", "none")
+
+    # OIDC (Phase 6 - Mode B)
+    OIDC_JWKS_URL: str | None = os.getenv("OIDC_JWKS_URL")
+    OIDC_ISSUER: str | None = os.getenv("OIDC_ISSUER")
+    OIDC_AUDIENCE: str | None = os.getenv("OIDC_AUDIENCE")
+    OIDC_JWT_ALG: str = os.getenv("OIDC_JWT_ALG", "RS256")  # RS256 in production; HS256 for offline tests
+    OIDC_JWT_SECRET: str | None = os.getenv("OIDC_JWT_SECRET")  # used for HS256
+
     def __post_init__(self):
         self.FIXED_FX_RATES = {
             "USD": 1.0,

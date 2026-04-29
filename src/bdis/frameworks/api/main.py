@@ -1,7 +1,7 @@
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from bdis.frameworks.api.routers import documents, jobs
+from bdis.frameworks.api.routers import documents, jobs, workspaces
 from bdis.core.logging_config import setup_json_logging
 
 # Configure structured JSON logging
@@ -30,6 +30,7 @@ def create_app() -> FastAPI:
     # Wire up consolidated routers
     app.include_router(documents.router)
     app.include_router(jobs.router)
+    app.include_router(workspaces.router)
 
     @app.get("/health")
     async def health_check():

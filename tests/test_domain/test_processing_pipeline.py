@@ -3,6 +3,7 @@ from unittest.mock import Mock, MagicMock
 from bdis.usecases.processing_pipeline import ProcessingPipeline
 from bdis.domain.entities import DocumentExtraction, JobStatus
 from bdis.domain.evaluation import EvaluationResult
+from bdis.core.tenancy import DEFAULT_WORKSPACE_ID
 
 @pytest.fixture
 def mock_dependencies():
@@ -32,6 +33,7 @@ def test_pipeline_execution_success(mock_dependencies):
         raw_text="dirty text",
         document_id="doc1",
         trace_id="trace1",
+        workspace_id=DEFAULT_WORKSPACE_ID,
         expected_data={"company_name": "Test", "amount": 100.0}
     )
     
@@ -52,7 +54,8 @@ def test_pipeline_execution_failure(mock_dependencies):
     result = pipeline.execute(
         raw_text="dirty text",
         document_id="doc1",
-        trace_id="trace1"
+        trace_id="trace1",
+        workspace_id=DEFAULT_WORKSPACE_ID,
     )
     
     # Assertions

@@ -1,6 +1,7 @@
 pytest==8.1.1
 pydantic==2.7.0
 sqlalchemy==2.0.29
+alembic==1.15.1
 openai==1.23.2
 fastapi==0.110.1
 uvicorn==0.29.0

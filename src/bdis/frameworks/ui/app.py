@@ -18,7 +18,10 @@ def inject_css():
 st.set_page_config(page_title="BDIS Intelligence Console", layout="wide")
 inject_css()
 
-client = BdisApiClient()
+if "bdis_workspace_id" not in st.session_state:
+    st.session_state["bdis_workspace_id"] = None
+
+client = BdisApiClient(workspace_id=st.session_state["bdis_workspace_id"])
 
 @st.cache_data(ttl=15, show_spinner=False)
 def get_dashboard_data():
@@ -35,8 +38,47 @@ def render_dashboard():
         """, unsafe_allow_html=True)
         
         st.divider()
+        st.subheader("Workspace")
+
+        workspaces = client.list_workspaces()
+        workspace_ids = [w.get("workspace_id") for w in workspaces if w.get("workspace_id")]
+        if workspace_ids:
+            current = st.session_state["bdis_workspace_id"] or workspace_ids[0]
+            selected = st.selectbox("Workspace", workspace_ids, index=workspace_ids.index(current) if current in workspace_ids else 0)
+            st.session_state["bdis_workspace_id"] = selected
+            client.set_workspace(selected)
+        else:
+            st.caption("No workspaces found. Run `scripts/bootstrap_dev_workspace.py` and enable `BDIS_AUTH_MODE=dev_headers`.")
+
+        st.divider()
         st.subheader("Data Ingestion")
-        render_uploader(client)
+        # Role-aware UI: auditors are read-only.
+        if client.role == "AUDITOR":
+            st.info("Read-only access (AUDITOR). Upload disabled.")
+        else:
+            render_uploader(client)
+
+        # Owner admin panel (minimal)
+        if client.role == "OWNER":
+            st.divider()
+            st.subheader("Workspace Admin")
+            members = client.list_members()
+            if members:
+                st.caption("Members")
+                st.json(members)
+            else:
+                st.caption("No members (or insufficient permissions).")
+
+            with st.expander("Add member"):
+                new_user_id = st.text_input("User ID", key="new_member_user_id")
+                new_email = st.text_input("Email (optional)", key="new_member_email")
+                new_role = st.selectbox("Role", ["ANALYST", "AUDITOR", "OWNER"], index=0, key="new_member_role")
+                if st.button("Add/Update member"):
+                    ok = client.add_member(new_user_id, role=new_role, email=new_email or None)
+                    if ok:
+                        st.success("Member updated.")
+                    else:
+                        st.error("Failed to update member.")
         
         st.divider()
         st.subheader("Asset Filters")
@@ -89,6 +131,12 @@ def render_dashboard():
 
     # 3. Main Stage (Ledger-First)
     render_metrics(filtered_data)
+
+    # Jobs ledger (Phase 6C2)
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### Jobs ledger")
+    jobs = client.list_jobs()
+    st.dataframe(jobs, use_container_width=True)
     
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### Document registry ledger")

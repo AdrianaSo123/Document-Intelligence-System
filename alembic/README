@@ -1,0 +1,6 @@
+This directory contains Alembic migrations.
+
+Run migrations (example):
+
+  DATABASE_URL=sqlite:///bdis_prod.db PYTHONPATH=src alembic upgrade head
+

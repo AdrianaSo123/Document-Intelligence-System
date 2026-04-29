@@ -1,68 +1,22 @@
-from sqlalchemy import Column, String, Float, Date, JSON, ForeignKey, Integer
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+from __future__ import annotations
+
+import sqlalchemy as sa
 from bdis.domain.entities import DocumentExtraction, JobStatus
 from bdis.domain.value_objects import Money
 from bdis.ports.document_repository import IDocumentRepository
 from bdis.domain.evaluation import EvaluationResult
-
-Base = declarative_base()
-
-class DocumentModel(Base):
-    __tablename__ = "documents"
-    id = Column(String, primary_key=True)
-    document_id = Column(String, unique=True, index=True)
-    s3_uri = Column(String, nullable=True)
-    created_at = Column(Date)
-    
-    extractions = relationship("ExtractionModel", back_populates="document")
-    evaluations = relationship("EvaluationModel", back_populates="document")
-
-class ExtractionModel(Base):
-    __tablename__ = "extractions"
-    id = Column(String, primary_key=True)
-    document_id = Column(String, ForeignKey("documents.document_id"))
-    trace_id = Column(String)
-    company_name = Column(String, nullable=True)
-    amount_usd = Column(Float, nullable=False, default=0.0)
-    currency = Column(String, nullable=False, default="USD")
-    status = Column(String, nullable=False)
-    due_date = Column(Date, nullable=True)
-    confidence = Column(Float, default=0.0)
-    error_message = Column(String, nullable=True)
-    extracted_data_json = Column(JSON, nullable=True)
-    raw_text = Column(String, nullable=True)
-    created_at = Column(Date)
-    
-    document = relationship("DocumentModel", back_populates="extractions")
-
-class EvaluationModel(Base):
-    __tablename__ = "evaluations"
-    id = Column(String, primary_key=True)
-    document_id = Column(String, ForeignKey("documents.document_id"))
-    accuracy = Column(Float)
-    field_scores_json = Column(JSON)
-    confidence_score = Column(Float)
-    created_at = Column(Date)
-    
-    document = relationship("DocumentModel", back_populates="evaluations")
-
-class InsightsModel(Base):
-    """
-    Persistent aggregate metrics as required by Section 8 of the Spec.
-    """
-    __tablename__ = "insights"
-    id = Column(String, primary_key=True) # Usually a singleton "current"
-    total_revenue_usd = Column(Float, default=0.0)
-    overdue_count = Column(Integer, default=0)
-    high_risk_count = Column(Integer, default=0)
-    document_count = Column(Integer, default=0)
-    last_updated = Column(Date)
+from bdis.infrastructure.persistence.models import (
+    DocumentModel,
+    ExtractionModel,
+    EvaluationModel,
+    InsightsModel,
+)
 
 class SQLDocumentRepository(IDocumentRepository):
     def __init__(self, session_factory):
         self.SessionLocal = session_factory
 
-    def save(self, extraction: DocumentExtraction) -> str:
+    def save(self, workspace_id: str, extraction: DocumentExtraction) -> str:
         import uuid
         from datetime import date
         
@@ -73,16 +27,13 @@ class SQLDocumentRepository(IDocumentRepository):
                 extracted_data_json[k] = v.isoformat()
 
         # 2. Map to Models
-        doc_model = DocumentModel(
-            id=str(uuid.uuid4()),
-            document_id=extraction.document_id,
-            s3_uri=extraction.s3_uri,
-            created_at=extraction.created_at
-        )
+        # Enterprise requirement: deterministic behavior under retries.
+        # With unique(workspace_id, document_id), we must not blindly insert a new DocumentModel each time.
         
         ext_model = ExtractionModel(
             id=str(uuid.uuid4()),
             document_id=extraction.document_id,
+            workspace_id=workspace_id,
             trace_id=extraction.trace_id,
             company_name=extraction.company_name,
             amount_usd=extraction.amount_usd,
@@ -101,6 +52,7 @@ class SQLDocumentRepository(IDocumentRepository):
             eval_model = EvaluationModel(
                 id=str(uuid.uuid4()),
                 document_id=extraction.document_id,
+                workspace_id=workspace_id,
                 accuracy=extraction.evaluation.accuracy,
                 field_scores_json=extraction.evaluation.field_scores,
                 confidence_score=extraction.evaluation.confidence_score,
@@ -110,29 +62,48 @@ class SQLDocumentRepository(IDocumentRepository):
         # 3. Persist in a single transaction
         with self.SessionLocal() as session:
             try:
-                session.add(doc_model)
+                existing_doc = (
+                    session.query(DocumentModel)
+                    .filter_by(workspace_id=workspace_id, document_id=extraction.document_id)
+                    .first()
+                )
+                if existing_doc:
+                    # Keep the latest URI around if present.
+                    if extraction.s3_uri:
+                        existing_doc.s3_uri = extraction.s3_uri
+                else:
+                    session.add(
+                        DocumentModel(
+                            id=str(uuid.uuid4()),
+                            document_id=extraction.document_id,
+                            workspace_id=workspace_id,
+                            s3_uri=extraction.s3_uri,
+                            created_at=extraction.created_at,
+                        )
+                    )
+
                 session.add(ext_model)
                 if eval_model:
                     session.add(eval_model)
                 session.commit()
                 
                 # 4. Final Spec Compliance: Update persistent Insights table
-                self._recalculate_insights(session_factory=self.SessionLocal)
+                self._recalculate_insights(session_factory=self.SessionLocal, workspace_id=workspace_id)
             except Exception:
                 session.rollback()
                 raise
                 
         return extraction.document_id
 
-    def _recalculate_insights(self, session_factory):
+    def _recalculate_insights(self, session_factory, workspace_id: str):
         """
-        Materialized View logic: Recalculates and persists global metrics.
+        Materialized View logic: Recalculates and persists per-workspace metrics.
         """
         from bdis.core.financials import convert_to_usd
         from datetime import date
         
         with session_factory() as session:
-            all_ext = session.query(ExtractionModel).all()
+            all_ext = session.query(ExtractionModel).filter_by(workspace_id=workspace_id).all()
             
             total_rev = 0.0
             overdue = 0
@@ -150,9 +121,9 @@ class SQLDocumentRepository(IDocumentRepository):
                 if e.amount_usd >= 10000.0: high_risk += 1
                 elif not e.company_name: high_risk += 1
             
-            insights = session.query(InsightsModel).filter_by(id="current").first()
+            insights = session.query(InsightsModel).filter_by(workspace_id=workspace_id, id="current").first()
             if not insights:
-                insights = InsightsModel(id="current")
+                insights = InsightsModel(workspace_id=workspace_id, id="current")
                 session.add(insights)
                 
             insights.total_revenue_usd = total_rev
@@ -163,18 +134,27 @@ class SQLDocumentRepository(IDocumentRepository):
             
             session.commit()
         
-    def get_all(self) -> list[DocumentExtraction]:
+    def get_all(self, workspace_id: str) -> list[DocumentExtraction]:
         """
         Retrieves normalized records and reconstructs the DocumentExtraction Domain Entity.
         """
         with self.SessionLocal() as session:
             # Query joined data
-            records = session.query(ExtractionModel).join(DocumentModel).all()
+            records = (
+                session.query(ExtractionModel)
+                .join(DocumentModel)
+                .filter(ExtractionModel.workspace_id == workspace_id)
+                .all()
+            )
             
             results = []
             for r in records:
                 # Find matching evaluation if any
-                evaluation_record = session.query(EvaluationModel).filter_by(document_id=r.document_id).first()
+                evaluation_record = (
+                    session.query(EvaluationModel)
+                    .filter_by(workspace_id=workspace_id, document_id=r.document_id)
+                    .first()
+                )
                 evaluation_result = None
                 if evaluation_record:
                     evaluation_result = EvaluationResult(
@@ -200,13 +180,65 @@ class SQLDocumentRepository(IDocumentRepository):
                     created_at=r.created_at
                 ))
             return results
+
+    def get_by_document_id(self, workspace_id: str, document_id: str) -> DocumentExtraction | None:
+        with self.SessionLocal() as session:
+            r = (
+                session.query(ExtractionModel)
+                .filter_by(workspace_id=workspace_id, document_id=document_id)
+                .order_by(ExtractionModel.created_at.desc())
+                .first()
+            )
+            if not r:
+                return None
+
+            evaluation_record = (
+                session.query(EvaluationModel)
+                .filter_by(workspace_id=workspace_id, document_id=document_id)
+                .first()
+            )
+            evaluation_result = None
+            if evaluation_record:
+                evaluation_result = EvaluationResult(
+                    document_id=document_id,
+                    accuracy=evaluation_record.accuracy,
+                    field_scores=evaluation_record.field_scores_json,
+                    confidence_score=evaluation_record.confidence_score,
+                )
+
+            doc = (
+                session.query(DocumentModel)
+                .filter_by(workspace_id=workspace_id, document_id=document_id)
+                .first()
+            )
+
+            return DocumentExtraction(
+                document_id=r.document_id,
+                status=r.status,
+                raw_text=r.raw_text or "",
+                extracted_data=r.extracted_data_json or {},
+                money=Money(r.amount_usd, r.currency or "USD"),
+                company_name=r.company_name,
+                due_date=r.due_date,
+                s3_uri=doc.s3_uri if doc else None,
+                confidence=r.confidence,
+                evaluation=evaluation_result,
+                error_message=r.error_message,
+                trace_id=r.trace_id,
+                created_at=r.created_at,
+            )
             
-    def get_all_raw(self) -> list[dict]:
+    def get_all_raw(self, workspace_id: str) -> list[dict]:
         """
         Optimized 'Read Model' for UI Dashboard.
         """
         with self.SessionLocal() as session:
-            records = session.query(ExtractionModel).join(DocumentModel).all()
+            records = (
+                session.query(ExtractionModel)
+                .join(DocumentModel)
+                .filter(ExtractionModel.workspace_id == workspace_id)
+                .all()
+            )
             return [
                 {
                     "document_id": r.document_id,

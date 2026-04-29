@@ -6,8 +6,8 @@ class FetchDocumentsUseCase:
     def __init__(self, repository: IDocumentRepository):
         self.repository = repository
         
-    def execute(self) -> List[dict]:
-        records = self.repository.get_all_raw()
+    def execute(self, workspace_id: str) -> List[dict]:
+        records = self.repository.get_all_raw(workspace_id)
         for r in records:
             if r["due_date"]:
                 r["due_date"] = r["due_date"].isoformat()
